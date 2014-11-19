@@ -1,0 +1,4 @@
+./generateTestFlashes.py -n 100 -o data/dom_19_15_flashes_100.i3
+./applyCLSim.py -i data/dom_19_15_flashes_100.i3 -o data/dom_19_15_flashes_clsim_100.i3
+./convertphotons.py
+./flasher_prep.py  data/dom_19_15_flashes_clsim_1_final_0.i3 data/dom_19_15_flashes_clsim_1.root
