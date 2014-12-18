@@ -9,7 +9,7 @@ parser.add_option("-o", "--outfile",default="test_flashes.i3",
                   dest="OUTFILE", help="Write output to OUTFILE (.i3{.gz} format)")
 parser.add_option("-s", "--seed",type="int",default=12344,
                   dest="SEED", help="Initial seed for the random number generator")
-parser.add_option("-g", "--gcd",default="GeoCalibDetectorStatus_2012.56063_V1.i3.gz",
+parser.add_option("-g", "--gcd",default="gcd.i3",
                   dest="GCDFILE", help="Read geometry from GCDFILE (.i3{.gz} format)")
 parser.add_option("-r", "--runnumber", type="int", default=1,
                   dest="RUNNUMBER", help="The run number for this simulation")

@@ -5,12 +5,13 @@ from icecube import icetray, dataclasses, dataio, phys_services,clsim
 import numpy as np
 from icecube.simprod import segments
 
-geofile = "GeoCalibDetectorStatus_2012.56063_V1.i3.gz"
+#geofile = "data/GeoCalibDetectorStatus_2012.56063_V1.i3.gz"
+#geofile = "gcd.i3"
+geofile = "data/GeoCalibDetectorStatus_IC86.55697_V2.i3.gz"
+SEED = 12345
 
-#badDOMlist = "/nv/hp11/jcasey8/data3/icecube/clsim/src/BadDomList/resources/scripts/bad_data_producing_doms_list.txt"
-
-for i in range(12):
-    print "Run %d:" % i
+for i in range(1):
+    #print "Run %d:" % i
 
     ca = np.pi*i/12.
     #fname = "data/dom_19_15_flashes_clsim_nosave.i3"
@@ -25,26 +26,29 @@ for i in range(12):
     tray.AddModule("I3Reader","reader",Filename=fname)
     #tray.AddModule("I3GCDAuditor","auditor")
     tray.AddModule("I3CableShadowModule","cableshadow",CableMap=cablemap)
-    tray.AddService("I3SPRNGRandomServiceFactory","random",
+
+    tray.AddService("I3SPRNGRandomServiceFactory","I3RandomService",
                     seed = 12345,
                     nstreams = 10000,
                     streamnum = 1)
     tray.AddSegment(clsim.I3CLSimMakeHitsFromPhotons,
                     DOMOversizeFactor = 1.0,
-                    MCPESeriesName = "MCPESeriesMap",
+                    MCPESeriesName = "MCPESeriesMapFiltered",
                     #PhotonSeriesName = "PropagatedPhotons",
                     PhotonSeriesName = "FilteredPropagatedPhotons",
-                    RandomService = "random",
-                    UnshadowedFraction = 1.0,)
+                    RandomService = "I3RandomService",
+                    UnshadowedFraction = 0.99999,)
     tray.AddSegment(segments.DetectorSim, "DetectorSim",
-                    RandomService = "random",
+                    RandomService = "I3RandomService",
                     GCDFile = geofile,
                     InputPESeriesMapName = "MCPESeriesMap",
                     KeepMCHits = True,
-                    UseDOMLauncher = True,
+                    #UseDOMLauncher = True,
                     SkipNoiseGenerator = False)
     tray.AddModule("I3Writer","writer", 
-                   Filename = "data/dom_19_15_flash_clsim_1_id_%d.i3" %i)
-    tray.Execute(6)
+                   Filename = "data/dom_19_15_flash_clsim_100_id_%d.i3" %i)
+    tray.AddModule("TrashCan", "the can")
+    tray.Execute()
 
+    tray.Finish()
 

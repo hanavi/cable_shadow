@@ -1,33 +1,24 @@
 #!/usr/bin/env python
-"""
-This shows how to use clsim using the provided
-tray segment. In this mode, clsim can act as
-a "drop-in" replacement for hit-maker or PPC.
-"""
 
 from __future__ import print_function
 from optparse import OptionParser
 import os
 import string
 
-#import I3CableFilter
-
 usage = "usage: %prog [options] inputfile"
 parser = OptionParser(usage)
 parser.add_option("-o", "--outfile", default=None,
                   dest="OUTFILE", help="Write output to OUTFILE (.i3{.gz} format)")
-parser.add_option("-i", "--infile", default=None,
+parser.add_option("-i", "--infile", default="test_flashes.i3",
                   dest="INFILE", help="Read input from INFILE (.i3{.gz} format)")
-parser.add_option("-s", "--seed",type="int",default=12345,
+parser.add_option("-s", "--seed",type="int",default=12346,
                   dest="SEED", help="Initial seed for the random number generator")
 parser.add_option("-r", "--runnumber", type="int", default=1,
                   dest="RUNNUMBER", help="The run number for this simulation")
-parser.add_option("-p", "--max-parallel-events", type="int", default=1,
+parser.add_option("-p", "--max-parallel-events", type="int", default=10,
                   dest="MAXPARALLELEVENTS", help="maximum number of events(==frames) that will be processed in parallel")
-parser.add_option("--remove-photon-data", action="store_true", default=False,
-                  dest="REMOVEPHOTONDATA", help="Remove I3Photons before writing the output file (only keep hits)")
-parser.add_option("--input-is-pre-sliced", action="store_true", default=False,
-                  dest="INPUTISPRESLICED", help="use this when the I3MCTree is already sliced")
+parser.add_option("--keep-photon-data", action="store_false", default=True,
+                  dest="REMOVEPHOTONDATA", help="Keep I3Photons before writing the output file (in addition to I3MCPEs")
 
 # parse cmd line args, bail out if anything is not understood
 (options,args) = parser.parse_args()
@@ -58,7 +49,7 @@ if infileExt == ".gz":
         infileExt = ".i3.gz"
 
 if infileExt != ".i3" and infileExt != ".i3.gz":
-        raise RuntimeError("you have to specify either a .i3 or an .i3.gz file!")
+        raise Exception("you have to specify either a .i3 or an .i3.gz file!")
 
 ########################
 outdir=""
@@ -101,24 +92,17 @@ import sys
 from icecube import icetray, dataclasses, dataio, phys_services
 from icecube import clsim
 
-icetray.logging.set_level_for_unit('I3CLSimStepToPhotonConverterOpenCL', 'INFO')
-
 # a random number generator
 randomService = phys_services.I3SPRNGRandomService(
     seed = options.SEED,
     nstreams = 10000,
     streamnum = options.RUNNUMBER)
 
-
 tray = I3Tray()
 
-# this is how you can dump some of the simulation timings&statistics to an XML file:
-tray.AddService("I3XMLSummaryServiceFactory","summary",
-    OutputFileName = "applyCLSim.xml")
 
 tray.AddModule("I3Reader","reader",
                Filename=infile)
-
 
 
 if options.REMOVEPHOTONDATA:
@@ -126,50 +110,17 @@ if options.REMOVEPHOTONDATA:
 else:
     photonSeriesName = "PropagatedPhotons"
 
-
-if not options.INPUTISPRESLICED:
-    MCTreeName="I3MCTree"
-    MMCTrackListName="MMCTrackList"
-else:
-    MCTreeName="I3MCTree_sliced"
-    MMCTrackListName=None
-
-flasherData=True
-
-if flasherData:
-    inputData = dict(
-        FlasherInfoVectName="I3FlasherInfo",
-        )
-else:
-    inputData = dict(
-        MCTreeName = MCTreeName,
-        MMCTrackListName = MMCTrackListName,
-        )
-
-tray.AddSegment(clsim.I3CLSimMakePhotons, "makeCLSimPhotons",
+tray.AddSegment(clsim.I3CLSimMakeHits, "makeCLSimHits",
+    PhotonHistoryEntries = 250,
     PhotonSeriesName = photonSeriesName,
     ParallelEvents = options.MAXPARALLELEVENTS,
     RandomService = randomService,
-    StopDetectedPhotons = False,
+    DOMOversizeFactor = 1.0,
+    UnshadowedFraction = 1.0,
     UseGPUs=True,
-    UseCPUs=True,
-    IceModelLocation=expandvars("$I3_SRC/clsim/resources/ice/spice_lea"),
-    # IceModelLocation="ANTARES",
-    PhotonHistoryEntries = 1000,
-
-    DOMOversizeFactor = 1.,
-    UnWeightedPhotons = 0.01,
-    ExtraArgumentsToI3CLSimModule = dict(
-        #SaveAllPhotons = True,
-        SaveAllPhotons = False,
-        SaveAllPhotonsPrescale = 0.01,
-        ),
-
-    **inputData
-
-    )
-    
-    # the real pre-scale is: UnWeightedPhotons*SaveAllPhotonsPrescale = 0.01%
+    UseCPUs=False,
+    IceModelLocation=expandvars("$I3_SRC/clsim/resources/ice/spice_mie"),
+    FlasherInfoVectName="I3FlasherInfo")
 
 tray.AddModule("I3Writer","writer",
     Filename = outdir+outfile)
